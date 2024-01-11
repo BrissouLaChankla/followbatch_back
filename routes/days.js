@@ -2,12 +2,11 @@ var express = require('express');
 var router = express.Router();
 const moment = require('moment');
 const OpenAI = require('openai');
-
+const Airtable = require('airtable');
+const convertDateToISO = require("../modules/formatDates");
 
 const checkCurrentBatch = require('../middlewares/checkCurrentBatch');
 
-const Batch = require('../models/Batch');
-const Student = require('../models/Student');
 const Day = require('../models/Day');
 const Generation = require('../models/Generation');
 
@@ -17,8 +16,16 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY // This is also the default, can be omitted
 });
 
+
 router.use(checkCurrentBatch);
 
+router.get('/all', function (req, res) {
+    Day.find()
+        .populate("batch")
+        .then(days => {
+            res.json({ days });
+        })
+})
 
 
 router.post('/store', function (req, res) {
@@ -116,18 +123,18 @@ router.get('/weekcron', function (req, res) {
 
 
         } else {
-              // Heure actuelle
-  let maintenant = moment();
+            // Heure actuelle
+            let maintenant = moment();
 
-  // Durée de 8 heures en millisecondes
-  let huitHeures = 8 * 60 * 60 * 1000;
+            // Durée de 8 heures en millisecondes
+            let huitHeures = 8 * 60 * 60 * 1000;
 
-  // Calculer la différence de temps depuis la dernière action
-  let tempsEcoule = maintenant.diff(moment(gen.lastWeekGeneration));
+            // Calculer la différence de temps depuis la dernière action
+            let tempsEcoule = maintenant.diff(moment(gen.lastWeekGeneration));
 
-    let tempsRestant = huitHeures - tempsEcoule;
-    let duree = moment.duration(tempsRestant);
-  
+            let tempsRestant = huitHeures - tempsEcoule;
+            let duree = moment.duration(tempsRestant);
+
 
             res.json({ message: `Désolé, tu dois encore attendre ${duree.hours()} heures et ${duree.minutes()} minutes avant le prochain prompt` })
         }
@@ -168,6 +175,37 @@ router.get('/generatedaily/:date*', function (req, res) {
             const message = `${day.global_comment} ${studentsMsg}Pour les autres élèves RAS 🫡 Globalement la journée a été ${dayAppreciation}`
 
             Day.updateOne({ _id: day.id }, { prompt: message }).then(data => {
+
+                const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.STUDENT_AIRTABLE_BASE);
+
+                
+                base('Daily standup Nice').select({
+                    // Recherchez les enregistrements par date
+                    filterByFormula: `FIND(${convertDateToISO(day.date)}, {Date})`
+                }).eachPage(function page(records, fetchNextPage) {
+                    records.forEach(function (record) {
+                        // ID de l'enregistrement trouvé
+                        var recordId = record.getId();
+
+                        // Supposons que la cellule cible est dans une colonne nommée 'Colonne_Cible'
+                        var updatedData = {};
+                        updatedData['Notes journalières'] = 'Nouvelle valeur'; // Nouvelle valeur à insérer
+
+                        // Mise à jour de l'enregistrement
+                        base('Daily standup Nice').update(recordId, updatedData, function (err, record) {
+                            if (err) {
+                                console.error(err);
+                                return;
+                            }
+                            console.log(record.get('Notes journalières'));
+                        });
+                    });
+
+                    fetchNextPage();
+
+                }, function done(err) {
+                    if (err) { console.error(err); return; }
+                });
                 return res.json({ data });
 
             })
@@ -176,8 +214,6 @@ router.get('/generatedaily/:date*', function (req, res) {
 
 
 });
-
-
 
 
 
