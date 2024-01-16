@@ -11,7 +11,7 @@ const daySchema = mongoose.Schema({
     date: String,
     batch:{ type: mongoose.Schema.Types.ObjectId, ref: 'batchs' },
     teacher_rate: { type: Number, default: 3 },
-    global_comment: { type: String, default: 'RAS' },
+    global_comment: { type: String, default: '' },
     student_feeling: [studentFeelingSchema],
     prompt:{ type: String, default: '' }
 });

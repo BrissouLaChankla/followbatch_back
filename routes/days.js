@@ -8,6 +8,7 @@ const convertDateToISO = require("../modules/formatDates");
 const checkCurrentBatch = require('../middlewares/checkCurrentBatch');
 
 const Day = require('../models/Day');
+const Week = require('../models/Week');
 const Generation = require('../models/Generation');
 
 
@@ -29,6 +30,11 @@ router.get('/all', function (req, res) {
 
 
 router.post('/store', function (req, res) {
+    const today = new Date().getDay();
+    if (today === 0 || today === 6) {
+        res.json("Pas de store les week-end!")
+        return;
+    }
 
     const studentsFeelings = [];
 
@@ -89,8 +95,9 @@ router.get('/weekcron', function (req, res) {
                         let date = moment().subtract(i, 'days').format('DD/MM/YYYY');
                         daysIncluded.push(date);
                     }
-                    const last5Days = days.filter(day => daysIncluded.includes(day.date));
 
+                    const last5Days = days.filter(day => daysIncluded.includes(day.date));
+                 
                     last5Days.forEach(el => {
                         prompt += `DEBRIEF JOURNEE : ${el.prompt}  --   `
                     });
@@ -114,11 +121,25 @@ router.get('/weekcron', function (req, res) {
                             "content": promptTosend
                         }],
                     });
+                    
+                    Week.find({batch:req.currentBatchId}).then(summaries => {
 
-                    Generation.updateOne({}, { lastWeekGeneration: new Date() }).then(() => {
-                        res.json({ gptAnswer: chatCompletion.choices[0].message })
+                        const newWeek = new Week({
+                            batch:req.currentBatchId,
+                            summary:chatCompletion.choices[0].message.content,
+                            week:summaries.length+1
+                        });
+
+                        newWeek.save().then(() => {
+                            Generation.updateOne({}, { lastWeekGeneration: new Date() }).then(() => {
+                                res.json({ result:true,gptAnswer: chatCompletion.choices[0].message })
+                                return;
+                            })
+                        })
+
                     })
-                    return;
+
+
                 });
 
 
