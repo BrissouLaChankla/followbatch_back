@@ -55,26 +55,54 @@ router.post('/store', function (req, res) {
         }
     }
 
-    const newData = {
-        date: req.body.date,
-        teacher_rate: req.body.teacher_rate,
-        batch: req.currentBatchId,
-        global_comment: req.body.global_comment,
-        student_feeling: studentsFeelings
-    }
-    console.log(newData)
+    Day.find({ bath: req.currentBatchId }).then(days => {
+
+        let week = 0;
+
+        if (days.length < 6) {
+            week = 1
+        } else if (days.length < 11) {
+            week = 2
+        } else if (days.length < 16) {
+            week = 3
+        } else if (days.length < 21) {
+            week = 4
+        } else if (days.length < 26) {
+            week = 5
+        } else if (days.length < 31) {
+            week = 6
+        } else if (days.length < 36) {
+            week = 7
+        } else if (days.length < 41) {
+            week = 8
+        } else if (days.length < 46) {
+            week = 9
+        } else {
+            week = 10
+        }
+
+        const newData = {
+            date: req.body.date,
+            teacher_rate: req.body.teacher_rate,
+            batch: req.currentBatchId,
+            week,
+            global_comment: req.body.global_comment,
+            student_feeling: studentsFeelings
+        }
+        console.log(newData)
 
 
-    Day.findOneAndUpdate({ date: req.body.date }, newData, { upsert: true, new: true, })
-        .then(() => {
-            return res.json('Succesfully saved.');
-        })
+        Day.findOneAndUpdate({ date: req.body.date }, newData, { upsert: true, new: true, })
+            .then(() => {
+                return res.json('Succesfully saved.');
+            })
+    })
 
 });
 
 
 
-router.get('/weekcron', function (req, res) {
+router.get('/weekcron/:week', function (req, res) {
     const date = req.params['date'] + req.params[0];
     Generation.findOne().then(gen => {
 
@@ -83,25 +111,21 @@ router.get('/weekcron', function (req, res) {
         const canGenerate = moment(gen.lastWeekGeneration).isBefore(eightHoursAgo);
 
 
-        if (canGenerate) {
+        if (!canGenerate) {
 
-            Day.find({ batch: req.currentBatchId })
+            Day.find({ batch: req.currentBatchId, week: req.params.week })
                 .populate("student_feeling.student")
                 .then(async days => {
-                    let daysIncluded = [];
                     let students = [];
                     let prompt = "";
-                    for (let i = 1; i < 6; i++) {
-                        let date = moment().subtract(i, 'days').format('DD/MM/YYYY');
-                        daysIncluded.push(date);
-                    }
+                  
+                    
+                    
 
-                    const last5Days = days.filter(day => daysIncluded.includes(day.date));
-                 
-                    last5Days.forEach(el => {
+                    days.forEach(el => {
                         prompt += `DEBRIEF JOURNEE : ${el.prompt}  --   `
                     });
-                    last5Days[0].student_feeling.forEach(eleve => {
+                    days[0].student_feeling.forEach(eleve => {
                         students.push(` ${eleve.student.firstname} ${eleve.student.lastname}`)
                     })
 
@@ -121,18 +145,18 @@ router.get('/weekcron', function (req, res) {
                             "content": promptTosend
                         }],
                     });
-                    
-                    Week.find({batch:req.currentBatchId}).then(summaries => {
+
+                    Week.find({ batch: req.currentBatchId }).then(summaries => {
 
                         const newWeek = new Week({
-                            batch:req.currentBatchId,
-                            summary:chatCompletion.choices[0].message.content,
-                            week:summaries.length+1
+                            batch: req.currentBatchId,
+                            summary: chatCompletion.choices[0].message.content,
+                            week: req.params.week
                         });
 
                         newWeek.save().then(() => {
                             Generation.updateOne({}, { lastWeekGeneration: new Date() }).then(() => {
-                                res.json({ result:true,gptAnswer: chatCompletion.choices[0].message })
+                                res.json({ result: true, gptAnswer: chatCompletion.choices[0].message })
                                 return;
                             })
                         })
@@ -199,7 +223,7 @@ router.get('/generatedaily/:date*', function (req, res) {
 
                 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.STUDENT_AIRTABLE_BASE);
 
-                
+
                 base('Daily standup Nice').select({
                     // Recherchez les enregistrements par date
                     filterByFormula: `FIND(${convertDateToISO(day.date)}, {Date})`
