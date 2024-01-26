@@ -111,7 +111,7 @@ router.get('/weekcron/:week', function (req, res) {
         const canGenerate = moment(gen.lastWeekGeneration).isBefore(eightHoursAgo);
 
 
-        if (!canGenerate) {
+        if (canGenerate) {
 
             Day.find({ batch: req.currentBatchId, week: req.params.week })
                 .populate("student_feeling.student")
