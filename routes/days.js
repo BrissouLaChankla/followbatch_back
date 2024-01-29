@@ -216,36 +216,6 @@ router.get('/generatedaily/:date*', function (req, res) {
 
             Day.updateOne({ _id: day.id }, { prompt: message }).then(data => {
 
-                const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.STUDENT_AIRTABLE_BASE);
-
-
-                base('Daily standup Nice').select({
-                    // Recherchez les enregistrements par date
-                    filterByFormula: `FIND(${convertDateToISO(day.date)}, {Date})`
-                }).eachPage(function page(records, fetchNextPage) {
-                    records.forEach(function (record) {
-                        // ID de l'enregistrement trouvé
-                        var recordId = record.getId();
-
-                        // Supposons que la cellule cible est dans une colonne nommée 'Colonne_Cible'
-                        var updatedData = {};
-                        updatedData['Notes journalières'] = 'Nouvelle valeur'; // Nouvelle valeur à insérer
-
-                        // Mise à jour de l'enregistrement
-                        base('Daily standup Nice').update(recordId, updatedData, function (err, record) {
-                            if (err) {
-                                console.error(err);
-                                return;
-                            }
-                            console.log(record.get('Notes journalières'));
-                        });
-                    });
-
-                    fetchNextPage();
-
-                }, function done(err) {
-                    if (err) { console.error(err); return; }
-                });
                 return res.json({ data });
 
             })
