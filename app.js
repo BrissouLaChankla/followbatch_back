@@ -16,7 +16,9 @@ var weeksRouter = require('./routes/weeks');
 var app = express();
 
 const cors = require('cors');
-app.use(cors());
+app.use(cors({
+    origin: true
+}));
 
 
 app.use(logger('dev'));
