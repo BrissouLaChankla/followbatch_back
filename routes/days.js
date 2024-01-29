@@ -103,15 +103,10 @@ router.post('/store', function (req, res) {
 
 
 router.get('/weekcron/:week', function (req, res) {
-    const date = req.params['date'] + req.params[0];
-    Generation.findOne().then(gen => {
-
-        // can't generate before waiting 8h
-        const eightHoursAgo = moment().subtract(8, 'hours');
-        const canGenerate = moment(gen.lastWeekGeneration).isBefore(eightHoursAgo);
+    Week.findOne({week:req.params.week}).then(weekGen => {
 
 
-        if (canGenerate) {
+        if (!weekGen) {
 
             Day.find({ batch: req.currentBatchId, week: req.params.week })
                 .populate("student_feeling.student")
@@ -146,7 +141,7 @@ router.get('/weekcron/:week', function (req, res) {
                         }],
                     });
 
-                    Week.find({ batch: req.currentBatchId }).then(summaries => {
+                    Week.find({ batch: req.currentBatchId }).then(() => {
 
                         const newWeek = new Week({
                             batch: req.currentBatchId,
