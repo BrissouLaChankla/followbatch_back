@@ -22,7 +22,7 @@ router.get('/all/:date*', function (req, res) {
             })
         }
 
-        
+
         const newData = {
             date: date,
             batch: req.currentBatchId,
@@ -44,13 +44,13 @@ router.get('/all/:date*', function (req, res) {
                     } else {
                         const newDay = new Day(newData);
                         newDay.save()
-                .then(batchCreated => {
-                            return res.json(
-                                {
-                                    infoBatch: batchCreated,
-                                    allBatchs: batchs
-                                })
-                        })
+                            .then(batchCreated => {
+                                return res.json(
+                                    {
+                                        infoBatch: batchCreated,
+                                        allBatchs: batchs
+                                    })
+                            })
                     }
                 });
 
@@ -58,7 +58,6 @@ router.get('/all/:date*', function (req, res) {
 
     });
 });
-
 
 
 

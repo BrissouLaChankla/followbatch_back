@@ -26,6 +26,14 @@ router.get('/all', function (req, res) {
         })
 })
 
+router.get('/dates', function (req, res) {
+    Day.find({batch:req.currentBatchId}, 'date')
+        .then(days => {
+            res.json({ days });
+        })
+})
+
+
 
 router.post('/store', function (req, res) {
     const today = new Date().getDay();
